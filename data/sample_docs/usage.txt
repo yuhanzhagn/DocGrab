@@ -1,0 +1,6 @@
+Query requests search the indexed chunks and return grounded answers.
+
+The current MVP uses a deterministic hashing embedder so tests stay local and do not
+depend on external model APIs.
+
+Citations help users understand which source supported the response.

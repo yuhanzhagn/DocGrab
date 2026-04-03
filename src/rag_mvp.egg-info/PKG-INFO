@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: rag-mvp
+Version: 0.1.0
+Summary: A local-first Python RAG MVP with FastAPI and Chroma
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi>=0.115.0
+Requires-Dist: uvicorn[standard]>=0.30.0
+Requires-Dist: pydantic>=2.8.0
+Requires-Dist: pydantic-settings>=2.3.0
+Requires-Dist: chromadb>=0.5.5
+Requires-Dist: httpx>=0.27.0
+Requires-Dist: pytest>=8.2.0

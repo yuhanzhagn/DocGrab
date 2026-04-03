@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import TYPE_CHECKING
 
 from rag.chunkers.simple import SimpleTextChunker
 from rag.config.settings import get_settings
@@ -8,12 +9,16 @@ from rag.loaders.text_loader import TextDocumentLoader
 from rag.retrieval.retriever import Retriever
 from rag.services.indexing_service import IndexingService
 from rag.services.query_service import QueryService
-from rag.vectorstores.chroma_store import ChromaVectorStore
+
+if TYPE_CHECKING:
+    from rag.vectorstores.chroma_store import ChromaVectorStore
 
 
 @lru_cache
-def get_vector_store() -> ChromaVectorStore:
+def get_vector_store() -> "ChromaVectorStore":
     settings = get_settings()
+    from rag.vectorstores.chroma_store import ChromaVectorStore
+
     return ChromaVectorStore(
         persist_directory=settings.chroma_dir,
         collection_name=settings.chroma_collection_name,

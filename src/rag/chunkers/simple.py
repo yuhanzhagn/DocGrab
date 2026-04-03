@@ -21,13 +21,18 @@ class SimpleTextChunker(Chunker):
         chunk_index = 0
 
         while start < len(text):
-            end = min(start + self.chunk_size, len(text))
-            if end < len(text):
-                split_at = text.rfind("\n\n", start, end)
+            default_end = min(start + self.chunk_size, len(text))
+            end = default_end
+            if default_end < len(text):
+                split_at = text.rfind("\n\n", start, default_end)
                 if split_at == -1:
-                    split_at = text.rfind("\n", start, end)
-                if split_at != -1 and split_at > start:
+                    split_at = text.rfind("\n", start, default_end)
+                # Favor natural boundaries, but never allow overlap handling to stall progress.
+                if split_at != -1 and split_at > start + self.chunk_overlap:
                     end = split_at
+
+            if end <= start:
+                end = default_end
 
             chunk_text = text[start:end].strip()
             if chunk_text:
@@ -56,6 +61,7 @@ class SimpleTextChunker(Chunker):
             if end >= len(text):
                 break
 
-            start = max(end - self.chunk_overlap, 0)
+            next_start = max(end - self.chunk_overlap, 0)
+            start = end if next_start <= start else next_start
 
         return chunks
