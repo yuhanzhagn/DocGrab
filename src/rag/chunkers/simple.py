@@ -40,6 +40,12 @@ class SimpleTextChunker(Chunker):
                 section_header = self._find_section_header(text=text, start=start, end=end)
                 if section_header is None and chunk_index == 0:
                     section_header = str(document.metadata.get("document_title") or "").strip() or None
+                page_number = self._page_number_for_chunk(
+                    start=start,
+                    end=end,
+                    page_spans=document.metadata.get("page_spans"),
+                    default_page_number=document.metadata.get("page_number"),
+                )
                 digest = hashlib.sha256(
                     f"{document.document_id}:{chunk_index}:{start}:{end}".encode("utf-8")
                 ).hexdigest()
@@ -59,7 +65,7 @@ class SimpleTextChunker(Chunker):
                             "file_type": document.metadata.get("file_type")
                             or document.file_extension.lstrip("."),
                             "section_header": section_header,
-                            "page_number": document.metadata.get("page_number"),
+                            "page_number": page_number,
                             "chunk_index": chunk_index,
                             "start_char": start,
                             "end_char": end,
@@ -93,3 +99,33 @@ class SimpleTextChunker(Chunker):
         if latest_header is not None:
             return latest_header
         return None
+
+    @staticmethod
+    def _page_number_for_chunk(
+        start: int,
+        end: int,
+        page_spans: object,
+        default_page_number: object,
+    ) -> int | None:
+        if isinstance(page_spans, list):
+            best_page_number: int | None = None
+            best_overlap = -1
+            for item in page_spans:
+                if not isinstance(item, dict):
+                    continue
+                page_start = int(item.get("start_char", 0))
+                page_end = int(item.get("end_char", page_start))
+                overlap = min(end, page_end) - max(start, page_start)
+                if overlap > best_overlap and overlap > 0:
+                    try:
+                        best_page_number = int(item.get("page_number"))
+                    except (TypeError, ValueError):
+                        best_page_number = None
+                    best_overlap = overlap
+            if best_page_number is not None:
+                return best_page_number
+
+        try:
+            return int(default_page_number) if default_page_number is not None else None
+        except (TypeError, ValueError):
+            return None

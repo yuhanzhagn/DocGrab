@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     external_generator_timeout_seconds: float = 30.0
     external_generator_temperature: float = 0.0
 
-    allowed_extensions: tuple[str, ...] = (".md", ".txt")
+    allowed_extensions: tuple[str, ...] = (".md", ".txt", ".pdf")
 
 
 @lru_cache

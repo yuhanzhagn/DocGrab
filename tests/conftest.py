@@ -8,6 +8,7 @@ from rag.chunkers.simple import SimpleTextChunker
 from rag.config.settings import get_settings
 from rag.embeddings.hash_embedder import HashingEmbedder
 from rag.generation.simple import SimpleGroundedAnswerGenerator
+from rag.loaders.multi_loader import MultiDocumentLoader
 from rag.loaders.text_loader import TextDocumentLoader
 from rag.main import create_app
 from rag.retrieval.retriever import Retriever
@@ -57,7 +58,7 @@ def indexing_service(
     test_vector_store: InMemoryVectorStore,
 ) -> IndexingService:
     return IndexingService(
-        loader=TextDocumentLoader(),
+        loader=MultiDocumentLoader(loaders=[TextDocumentLoader()]),
         chunker=SimpleTextChunker(chunk_size=120, chunk_overlap=20),
         embedder=embedder,
         vector_store=test_vector_store,

@@ -7,6 +7,8 @@ from rag.embeddings.base import Embedder
 from rag.embeddings.factory import create_embedder
 from rag.generation.base import AnswerGenerator
 from rag.generation.factory import create_generator
+from rag.loaders.multi_loader import MultiDocumentLoader
+from rag.loaders.pdf_loader import PDFDocumentLoader
 from rag.loaders.text_loader import TextDocumentLoader
 from rag.retrieval.retriever import Retriever
 from rag.services.indexing_service import IndexingService
@@ -37,7 +39,12 @@ def get_embedder() -> Embedder:
 def get_indexing_service() -> IndexingService:
     settings = get_settings()
     return IndexingService(
-        loader=TextDocumentLoader(),
+        loader=MultiDocumentLoader(
+            loaders=[
+                TextDocumentLoader(),
+                PDFDocumentLoader(),
+            ]
+        ),
         chunker=SimpleTextChunker(
             chunk_size=settings.chunk_size,
             chunk_overlap=settings.chunk_overlap,

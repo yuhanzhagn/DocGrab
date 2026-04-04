@@ -59,6 +59,30 @@ def test_simple_text_chunker_captures_markdown_section_header() -> None:
     assert any(chunk.metadata["section_header"] == "Retrieval" for chunk in chunks[1:])
 
 
+def test_simple_text_chunker_assigns_page_number_from_pdf_spans() -> None:
+    chunker = SimpleTextChunker(chunk_size=30, chunk_overlap=0)
+    document = RawDocument(
+        document_id="doc-pdf",
+        source_path="manual.pdf",
+        file_name="manual.pdf",
+        file_extension=".pdf",
+        content="First page text here.\n\nSecond page text here.",
+        metadata={
+            "document_title": "manual",
+            "file_type": "pdf",
+            "page_spans": [
+                {"page_number": 1, "start_char": 0, "end_char": 20},
+                {"page_number": 2, "start_char": 22, "end_char": 44},
+            ],
+        },
+    )
+
+    chunks = chunker.chunk(document)
+
+    assert chunks[0].metadata["page_number"] == 1
+    assert any(chunk.metadata["page_number"] == 2 for chunk in chunks[1:])
+
+
 def test_simple_text_chunker_returns_empty_for_blank_content() -> None:
     chunker = SimpleTextChunker(chunk_size=50, chunk_overlap=10)
     document = RawDocument(
