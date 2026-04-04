@@ -14,6 +14,11 @@ def test_text_loader_loads_markdown_file(sample_data_dir: Path) -> None:
     assert document.source_path == str(path)
     assert "Chroma" in document.content
     assert document.metadata["source_type"] == "text"
+    assert document.metadata["file_name"] == "architecture.md"
+    assert document.metadata["file_type"] == "md"
+    assert document.metadata["document_title"] == "RAG MVP Architecture"
+    assert document.metadata["section_header"] is None
+    assert document.metadata["page_number"] is None
 
 
 def test_text_loader_supports_txt_and_md() -> None:

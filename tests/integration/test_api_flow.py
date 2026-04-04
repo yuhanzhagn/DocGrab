@@ -31,9 +31,17 @@ def test_ingest_and_query_api_returns_citations(
     assert result.citations
     assert any("architecture.md" in citation.source_path for citation in result.citations)
     assert "Chroma" in result.answer_text
+    assert result.citations[0].document_title
+    assert result.citations[0].file_name == "architecture.md"
+    assert result.citations[0].file_type == "md"
+    assert hasattr(result.citations[0], "section_header")
+    assert hasattr(result.citations[0], "page_number")
     assert result.retrieved_chunks
     assert "score" in result.retrieved_chunks[0]
     assert "relevance" in result.retrieved_chunks[0]
+    assert "document_title" in result.retrieved_chunks[0]
+    assert "file_name" in result.retrieved_chunks[0]
+    assert "file_type" in result.retrieved_chunks[0]
 
 
 def test_query_api_supports_source_path_filter(

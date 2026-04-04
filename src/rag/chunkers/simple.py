@@ -1,4 +1,5 @@
 import hashlib
+import re
 
 from rag.schemas.document import Chunk, RawDocument
 from rag.chunkers.base import Chunker
@@ -36,6 +37,9 @@ class SimpleTextChunker(Chunker):
 
             chunk_text = text[start:end].strip()
             if chunk_text:
+                section_header = self._find_section_header(text=text, start=start, end=end)
+                if section_header is None and chunk_index == 0:
+                    section_header = str(document.metadata.get("document_title") or "").strip() or None
                 digest = hashlib.sha256(
                     f"{document.document_id}:{chunk_index}:{start}:{end}".encode("utf-8")
                 ).hexdigest()
@@ -49,7 +53,13 @@ class SimpleTextChunker(Chunker):
                         end_char=end,
                         metadata={
                             "source_path": document.source_path,
+                            "document_title": document.metadata.get("document_title")
+                            or document.file_name,
                             "file_name": document.file_name,
+                            "file_type": document.metadata.get("file_type")
+                            or document.file_extension.lstrip("."),
+                            "section_header": section_header,
+                            "page_number": document.metadata.get("page_number"),
                             "chunk_index": chunk_index,
                             "start_char": start,
                             "end_char": end,
@@ -65,3 +75,21 @@ class SimpleTextChunker(Chunker):
             start = end if next_start <= start else next_start
 
         return chunks
+
+    @staticmethod
+    def _find_section_header(text: str, start: int, end: int) -> str | None:
+        latest_header: str | None = None
+        latest_position = -1
+
+        for match in re.finditer(r"(?m)^(#{1,6})\s+(.+?)\s*$", text):
+            header_text = match.group(2).strip()
+            if not header_text:
+                continue
+            position = match.start()
+            if position <= end and position >= latest_position:
+                latest_header = header_text
+                latest_position = position
+
+        if latest_header is not None:
+            return latest_header
+        return None

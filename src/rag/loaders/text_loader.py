@@ -14,9 +14,15 @@ class TextDocumentLoader(DocumentLoader):
     def load(self, path: Path) -> RawDocument:
         content = path.read_text(encoding="utf-8")
         document_id = hashlib.sha256(str(path.resolve()).encode("utf-8")).hexdigest()
+        title = self._extract_title(path=path, content=content)
         metadata = {
             "source_type": "text",
             "extension": path.suffix.lower(),
+            "file_name": path.name,
+            "file_type": path.suffix.lower().lstrip("."),
+            "document_title": title,
+            "section_header": None,
+            "page_number": None,
         }
         return RawDocument.from_path(
             document_id=document_id,
@@ -24,3 +30,14 @@ class TextDocumentLoader(DocumentLoader):
             content=content,
             metadata=metadata,
         )
+
+    @staticmethod
+    def _extract_title(path: Path, content: str) -> str:
+        for line in content.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            if stripped.startswith("#"):
+                return stripped.lstrip("#").strip() or path.stem
+            return stripped
+        return path.stem
