@@ -10,7 +10,7 @@ down:
 	docker compose down
 
 logs:
-	docker compose logs -f app chroma
+	docker compose logs -f app web chroma
 
 ps:
 	docker compose ps

@@ -1,0 +1,31 @@
+{% extends "demo_ui/base.html" %}
+
+{% block content %}
+<section class="card">
+    <h2>Ingest Documents</h2>
+    <p class="muted">Submit a directory path and Django will forward it to the FastAPI ingest endpoint.</p>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Run Ingestion</button>
+    </form>
+</section>
+
+{% if result %}
+    <section class="card">
+        <h2>Indexing Result</h2>
+        <ul class="clean">
+            <li><strong>Indexed documents:</strong> {{ result.indexed_documents }}</li>
+            <li><strong>Indexed chunks:</strong> {{ result.indexed_chunks }}</li>
+        </ul>
+        {% if result.skipped_files %}
+            <h3>Skipped Files</h3>
+            <ul class="clean">
+                {% for path in result.skipped_files %}
+                    <li>{{ path }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </section>
+{% endif %}
+{% endblock %}
