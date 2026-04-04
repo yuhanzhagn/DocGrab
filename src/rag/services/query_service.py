@@ -8,6 +8,10 @@ class QueryService:
         self.retriever = retriever
         self.generator = generator
 
-    def answer(self, query: str, top_k: int) -> FinalAnswer:
-        retrieval_results = self.retriever.retrieve(query=query, top_k=top_k)
+    def answer(self, query: str, top_k: int, path_filter: str | None = None) -> FinalAnswer:
+        retrieval_results = self.retriever.retrieve(
+            query=query,
+            top_k=top_k,
+            path_filter=path_filter,
+        )
         return self.generator.generate(query=query, retrieval_results=retrieval_results)

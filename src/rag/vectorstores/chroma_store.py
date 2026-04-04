@@ -27,6 +27,7 @@ class ChromaVectorStore(VectorStore):
             {
                 "document_id": record.document_id,
                 "source_path": record.source_path,
+                "document_path": record.source_path,
                 **self._normalize_metadata(record.metadata),
             }
             for record in records
@@ -39,11 +40,17 @@ class ChromaVectorStore(VectorStore):
             metadatas=metadatas,
         )
 
-    def query(self, query_embedding: list[float], top_k: int) -> list[RetrievalResult]:
+    def query(
+        self,
+        query_embedding: list[float],
+        top_k: int,
+        path_filter: str | None = None,
+    ) -> list[RetrievalResult]:
         raw = self._collection.query(
             query_embeddings=[query_embedding],
             n_results=top_k,
             include=["documents", "metadatas", "distances"],
+            where={"source_path": path_filter} if path_filter else None,
         )
 
         ids = raw.get("ids", [[]])[0]
@@ -54,7 +61,8 @@ class ChromaVectorStore(VectorStore):
         results: list[RetrievalResult] = []
         for chunk_id, text, metadata, distance in zip(ids, documents, metadatas, distances):
             metadata = metadata or {}
-            score = 1.0 - float(distance)
+            distance_value = float(distance)
+            score = 1.0 - distance_value
             results.append(
                 RetrievalResult(
                     chunk_id=chunk_id,
@@ -62,6 +70,8 @@ class ChromaVectorStore(VectorStore):
                     source_path=str(metadata.get("source_path", "")),
                     text=text,
                     score=score,
+                    distance=distance_value,
+                    relevance=self._score_to_relevance(score),
                     metadata=dict(metadata),
                 )
             )
@@ -76,3 +86,11 @@ class ChromaVectorStore(VectorStore):
             else:
                 normalized[key] = str(value)
         return normalized
+
+    @staticmethod
+    def _score_to_relevance(score: float) -> str:
+        if score >= 0.35:
+            return "high"
+        if score >= 0.15:
+            return "medium"
+        return "low"

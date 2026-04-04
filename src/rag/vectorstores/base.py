@@ -10,5 +10,10 @@ class VectorStore(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def query(self, query_embedding: list[float], top_k: int) -> list[RetrievalResult]:
+    def query(
+        self,
+        query_embedding: list[float],
+        top_k: int,
+        path_filter: str | None = None,
+    ) -> list[RetrievalResult]:
         raise NotImplementedError

@@ -10,13 +10,15 @@ class SimpleGroundedAnswerGenerator(AnswerGenerator):
     a concise answer with citations so the whole project is runnable locally.
     """
 
+    _WEAK_MATCH_THRESHOLD = 0.15
+
     def generate(self, query: str, retrieval_results: list[RetrievalResult]) -> FinalAnswer:
         if not retrieval_results:
-            return FinalAnswer(
-                answer_text="I could not find relevant context in the indexed documents.",
-                citations=[],
-                retrieved_chunks=[],
-            )
+            return self._build_fallback_answer()
+
+        strongest_match = max(result.score for result in retrieval_results)
+        if strongest_match < self._WEAK_MATCH_THRESHOLD:
+            return self._build_fallback_answer(retrieval_results=retrieval_results)
 
         selected = retrieval_results[:3]
         summary_lines = [f"Question: {query}", "", "Grounded context:"]
@@ -48,6 +50,8 @@ class SimpleGroundedAnswerGenerator(AnswerGenerator):
                 {
                     "chunk_id": result.chunk_id,
                     "score": result.score,
+                    "distance": result.distance,
+                    "relevance": result.relevance,
                     "source_path": result.source_path,
                     "chunk_index": chunk_index,
                     "text": result.text,
@@ -58,5 +62,32 @@ class SimpleGroundedAnswerGenerator(AnswerGenerator):
         return FinalAnswer(
             answer_text=answer_text,
             citations=citations,
+            retrieved_chunks=retrieved_chunks,
+        )
+
+    def _build_fallback_answer(
+        self,
+        retrieval_results: list[RetrievalResult] | None = None,
+    ) -> FinalAnswer:
+        retrieved_chunks: list[dict] = []
+        for result in (retrieval_results or [])[:3]:
+            retrieved_chunks.append(
+                {
+                    "chunk_id": result.chunk_id,
+                    "score": result.score,
+                    "distance": result.distance,
+                    "relevance": result.relevance,
+                    "source_path": result.source_path,
+                    "chunk_index": int(result.metadata.get("chunk_index", 0)),
+                    "text": result.text,
+                }
+            )
+
+        return FinalAnswer(
+            answer_text=(
+                "I could not find enough grounded support in the indexed documents "
+                "to answer confidently."
+            ),
+            citations=[],
             retrieved_chunks=retrieved_chunks,
         )

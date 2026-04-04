@@ -14,5 +14,9 @@ def query_documents(
     request: QueryRequest,
     query_service: QueryService = Depends(get_query_service),
 ) -> QueryResponse:
-    result = query_service.answer(query=request.query, top_k=request.top_k)
+    result = query_service.answer(
+        query=request.query,
+        top_k=request.top_k,
+        path_filter=request.path_filter,
+    )
     return QueryResponse(result=result)

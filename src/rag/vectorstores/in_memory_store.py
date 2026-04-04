@@ -16,9 +16,24 @@ class InMemoryVectorStore(VectorStore):
             by_id[record.chunk_id] = record
         self._records = list(by_id.values())
 
-    def query(self, query_embedding: list[float], top_k: int) -> list[RetrievalResult]:
+    def query(
+        self,
+        query_embedding: list[float],
+        top_k: int,
+        path_filter: str | None = None,
+    ) -> list[RetrievalResult]:
+        candidates = self._records
+        if path_filter:
+            candidates = [
+                record
+                for record in self._records
+                if record.source_path == path_filter
+                or str(record.metadata.get("source_path", "")) == path_filter
+                or str(record.metadata.get("document_path", "")) == path_filter
+            ]
+
         ranked = sorted(
-            self._records,
+            candidates,
             key=lambda record: self._cosine_similarity(query_embedding, record.embedding),
             reverse=True,
         )
@@ -32,6 +47,8 @@ class InMemoryVectorStore(VectorStore):
                     source_path=record.source_path,
                     text=record.text,
                     score=score,
+                    distance=1.0 - score,
+                    relevance=self._score_to_relevance(score),
                     metadata=dict(record.metadata),
                 )
             )
@@ -42,3 +59,11 @@ class InMemoryVectorStore(VectorStore):
         if not left or not right or len(left) != len(right):
             return 0.0
         return sum(left_value * right_value for left_value, right_value in zip(left, right))
+
+    @staticmethod
+    def _score_to_relevance(score: float) -> str:
+        if score >= 0.35:
+            return "high"
+        if score >= 0.15:
+            return "medium"
+        return "low"
