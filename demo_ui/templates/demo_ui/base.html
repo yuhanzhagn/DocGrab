@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>RAG Demo Shell</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f4f1ea;
+            --surface: #fffdf8;
+            --ink: #1e293b;
+            --muted: #64748b;
+            --accent: #0f766e;
+            --border: #d6d3d1;
+            --danger: #b91c1c;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Georgia, "Times New Roman", serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top left, rgba(15, 118, 110, 0.08), transparent 28%),
+                linear-gradient(180deg, #faf7f2 0%, var(--bg) 100%);
+        }
+        .wrap {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 32px 20px 64px;
+        }
+        header {
+            margin-bottom: 28px;
+        }
+        header h1 {
+            margin: 0 0 8px;
+            font-size: 2rem;
+        }
+        nav a {
+            margin-right: 16px;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 700;
+        }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow: 0 8px 30px rgba(15, 23, 42, 0.05);
+            margin-bottom: 20px;
+        }
+        form p {
+            margin: 0 0 14px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 700;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font: inherit;
+            background: #fff;
+        }
+        button {
+            background: var(--accent);
+            color: white;
+            border: 0;
+            border-radius: 999px;
+            padding: 10px 18px;
+            font: inherit;
+            cursor: pointer;
+        }
+        .messages {
+            list-style: none;
+            padding: 0;
+        }
+        .messages li {
+            padding: 10px 12px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            background: #e0f2f1;
+        }
+        .messages li.error {
+            background: #fee2e2;
+            color: var(--danger);
+        }
+        pre {
+            white-space: pre-wrap;
+            word-break: break-word;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            padding: 14px;
+            border-radius: 10px;
+        }
+        .muted {
+            color: var(--muted);
+        }
+        .grid {
+            display: grid;
+            gap: 18px;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        }
+        ul.clean {
+            padding-left: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <header>
+            <h1>RAG Demo Shell</h1>
+            <p class="muted">A lightweight Django UI that calls the existing FastAPI backend.</p>
+            <nav>
+                <a href="{% url 'home' %}">Home</a>
+                <a href="{% url 'ingest' %}">Ingest</a>
+                <a href="{% url 'query' %}">Query</a>
+                <a href="/admin/">Admin</a>
+            </nav>
+        </header>
+
+        {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                    <li class="{{ message.tags }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

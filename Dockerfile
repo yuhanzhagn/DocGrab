@@ -12,7 +12,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml README.md /app/
+COPY manage.py /app/
 COPY src /app/src
+COPY webshell /app/webshell
+COPY demo_ui /app/demo_ui
 
 RUN pip install --upgrade pip setuptools wheel \
     && pip install .

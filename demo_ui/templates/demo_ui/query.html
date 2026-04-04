@@ -1,0 +1,60 @@
+{% extends "demo_ui/base.html" %}
+
+{% block content %}
+<section class="card">
+    <h2>Query Documents</h2>
+    <p class="muted">Ask a question and Django will send it to the FastAPI query endpoint.</p>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Run Query</button>
+    </form>
+</section>
+
+{% if result %}
+    <section class="card">
+        <h2>Answer</h2>
+        <pre>{{ result.answer_text }}</pre>
+    </section>
+
+    <section class="card">
+        <h2>Citations</h2>
+        {% if result.citations %}
+            <ul class="clean">
+                {% for citation in result.citations %}
+                    <li>
+                        <strong>{{ citation.file_name|default:citation.source_path }}</strong>
+                        {% if citation.section_header %} · {{ citation.section_header }}{% endif %}
+                        {% if citation.page_number %} · page {{ citation.page_number }}{% endif %}
+                        <br>
+                        <span class="muted">{{ citation.source_path }}</span>
+                        <br>
+                        {{ citation.snippet }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="muted">No citations returned.</p>
+        {% endif %}
+    </section>
+
+    <section class="card">
+        <h2>Retrieved Chunks</h2>
+        {% if result.retrieved_chunks %}
+            {% for chunk in result.retrieved_chunks %}
+                <article style="margin-bottom: 18px;">
+                    <p>
+                        <strong>{{ chunk.file_name|default:chunk.source_path }}</strong>
+                        · score {{ chunk.score }}
+                        {% if chunk.relevance %} · {{ chunk.relevance }}{% endif %}
+                        {% if chunk.page_number %} · page {{ chunk.page_number }}{% endif %}
+                    </p>
+                    <pre>{{ chunk.text }}</pre>
+                </article>
+            {% endfor %}
+        {% else %}
+            <p class="muted">No retrieved chunks returned.</p>
+        {% endif %}
+    </section>
+{% endif %}
+{% endblock %}

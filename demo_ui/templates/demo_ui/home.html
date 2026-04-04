@@ -1,0 +1,31 @@
+{% extends "demo_ui/base.html" %}
+
+{% block content %}
+<div class="grid">
+    <section class="card">
+        <h2>Start Here</h2>
+        <p>Use the Django shell to send ingestion and query requests to the FastAPI backend.</p>
+        <ul class="clean">
+            <li><a href="{% url 'ingest' %}">Go to ingest page</a></li>
+            <li><a href="{% url 'query' %}">Go to query page</a></li>
+            <li><a href="/admin/">Open Django admin</a></li>
+        </ul>
+    </section>
+
+    <section class="card">
+        <h2>Recent Queries</h2>
+        {% if recent_queries %}
+            <ul class="clean">
+                {% for item in recent_queries %}
+                    <li>
+                        <strong>{{ item.created_at }}</strong><br>
+                        {{ item.question|truncatechars:100 }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="muted">No query history yet.</p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
