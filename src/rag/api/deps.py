@@ -26,6 +26,9 @@ def get_vector_store() -> "ChromaVectorStore":
     return ChromaVectorStore(
         persist_directory=settings.chroma_dir,
         collection_name=settings.chroma_collection_name,
+        host=settings.chroma_host,
+        port=settings.chroma_port,
+        ssl=settings.chroma_ssl,
     )
 
 

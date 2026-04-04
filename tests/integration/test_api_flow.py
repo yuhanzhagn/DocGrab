@@ -6,6 +6,7 @@ from rag.schemas.api import IngestRequest
 from rag.schemas.retrieval import QueryRequest
 from rag.services.indexing_service import IndexingService
 from rag.services.query_service import QueryService
+from rag.use_cases import answer_query, ingest_directory
 
 
 def test_ingest_and_query_api_returns_citations(
@@ -84,3 +85,23 @@ def test_query_api_returns_grounded_fallback_for_weak_retrieval(
 
     assert payload.result.citations == []
     assert "could not find enough grounded support" in payload.result.answer_text.lower()
+
+
+def test_framework_agnostic_use_cases_match_api_behavior(
+    indexing_service: IndexingService,
+    query_service: QueryService,
+    sample_data_dir: Path,
+) -> None:
+    ingest_result = ingest_directory(
+        indexing_service=indexing_service,
+        directory=str(sample_data_dir),
+    )
+    answer = answer_query(
+        query_service=query_service,
+        query="Which database stores document embeddings?",
+        top_k=3,
+    )
+
+    assert ingest_result.indexed_documents >= 2
+    assert answer.citations
+    assert "Chroma" in answer.answer_text

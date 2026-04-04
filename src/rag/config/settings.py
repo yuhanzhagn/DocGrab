@@ -15,10 +15,15 @@ class Settings(BaseSettings):
     app_name: str = "RAG MVP"
     app_version: str = "0.1.0"
     api_prefix: str = "/api"
+    app_host: str = "0.0.0.0"
+    app_port: int = 8000
 
     data_dir: Path = Field(default=Path("data"))
     chroma_dir: Path = Field(default=Path("data/chroma"))
     chroma_collection_name: str = "documents"
+    chroma_host: str | None = None
+    chroma_port: int = 8000
+    chroma_ssl: bool = False
 
     chunk_size: int = 800
     chunk_overlap: int = 120
@@ -36,6 +41,7 @@ class Settings(BaseSettings):
     external_generator_base_url: str = "https://api.openai.com/v1"
     external_generator_timeout_seconds: float = 30.0
     external_generator_temperature: float = 0.0
+    local_model_endpoint: str | None = None
 
     allowed_extensions: tuple[str, ...] = (".md", ".txt", ".pdf")
 

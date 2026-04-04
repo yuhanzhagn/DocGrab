@@ -9,8 +9,22 @@ from rag.vectorstores.base import VectorStore
 
 
 class ChromaVectorStore(VectorStore):
-    def __init__(self, persist_directory: Path, collection_name: str) -> None:
-        self._client = chromadb.PersistentClient(path=str(persist_directory))
+    def __init__(
+        self,
+        persist_directory: Path,
+        collection_name: str,
+        host: str | None = None,
+        port: int = 8000,
+        ssl: bool = False,
+        persistent_client_factory=None,
+        http_client_factory=None,
+    ) -> None:
+        if host:
+            factory = http_client_factory or chromadb.HttpClient
+            self._client = factory(host=host, port=port, ssl=ssl)
+        else:
+            factory = persistent_client_factory or chromadb.PersistentClient
+            self._client = factory(path=str(persist_directory))
         self._collection: Collection = self._client.get_or_create_collection(
             name=collection_name,
             metadata={"hnsw:space": "cosine"},

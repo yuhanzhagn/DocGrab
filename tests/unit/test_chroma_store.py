@@ -72,3 +72,41 @@ def test_chroma_store_query_supports_path_filter(temp_vector_store: ChromaVector
 
     assert len(results) == 1
     assert results[0].chunk_id == "chunk-1"
+
+
+def test_chroma_store_uses_http_client_when_host_is_configured(tmp_path) -> None:
+    captured: dict[str, object] = {}
+
+    class _FakeClient:
+        def get_or_create_collection(self, name: str, metadata: dict) -> object:
+            captured["collection_name"] = name
+            captured["metadata"] = metadata
+
+            class _FakeCollection:
+                def upsert(self, **_: object) -> None:
+                    return None
+
+                def query(self, **_: object) -> dict[str, list[list[object]]]:
+                    return {"ids": [[]], "documents": [[]], "metadatas": [[]], "distances": [[]]}
+
+            return _FakeCollection()
+
+    def _fake_http_client_factory(host: str, port: int, ssl: bool) -> _FakeClient:
+        captured["host"] = host
+        captured["port"] = port
+        captured["ssl"] = ssl
+        return _FakeClient()
+
+    ChromaVectorStore(
+        persist_directory=tmp_path / "unused",
+        collection_name="remote-docs",
+        host="chroma",
+        port=8000,
+        ssl=False,
+        http_client_factory=_fake_http_client_factory,
+    )
+
+    assert captured["host"] == "chroma"
+    assert captured["port"] == 8000
+    assert captured["ssl"] is False
+    assert captured["collection_name"] == "remote-docs"
