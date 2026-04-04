@@ -3,8 +3,10 @@ from typing import TYPE_CHECKING
 
 from rag.chunkers.simple import SimpleTextChunker
 from rag.config.settings import get_settings
-from rag.embeddings.hash_embedder import HashingEmbedder
-from rag.generation.simple import SimpleGroundedAnswerGenerator
+from rag.embeddings.base import Embedder
+from rag.embeddings.factory import create_embedder
+from rag.generation.base import AnswerGenerator
+from rag.generation.factory import create_generator
 from rag.loaders.text_loader import TextDocumentLoader
 from rag.retrieval.retriever import Retriever
 from rag.services.indexing_service import IndexingService
@@ -26,9 +28,9 @@ def get_vector_store() -> "ChromaVectorStore":
 
 
 @lru_cache
-def get_embedder() -> HashingEmbedder:
+def get_embedder() -> Embedder:
     settings = get_settings()
-    return HashingEmbedder(dimension=settings.embedding_dimension)
+    return create_embedder(settings)
 
 
 @lru_cache
@@ -49,5 +51,6 @@ def get_indexing_service() -> IndexingService:
 @lru_cache
 def get_query_service() -> QueryService:
     retriever = Retriever(embedder=get_embedder(), vector_store=get_vector_store())
-    generator = SimpleGroundedAnswerGenerator()
+    settings = get_settings()
+    generator = create_generator(settings)
     return QueryService(retriever=retriever, generator=generator)

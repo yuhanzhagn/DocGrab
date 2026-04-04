@@ -3,8 +3,9 @@ from pathlib import Path
 import httpx
 import pytest
 
-from rag.api.deps import get_indexing_service, get_query_service
+from rag.api.deps import get_embedder, get_indexing_service, get_query_service
 from rag.chunkers.simple import SimpleTextChunker
+from rag.config.settings import get_settings
 from rag.embeddings.hash_embedder import HashingEmbedder
 from rag.generation.simple import SimpleGroundedAnswerGenerator
 from rag.loaders.text_loader import TextDocumentLoader
@@ -13,6 +14,14 @@ from rag.retrieval.retriever import Retriever
 from rag.services.indexing_service import IndexingService
 from rag.services.query_service import QueryService
 from rag.vectorstores.in_memory_store import InMemoryVectorStore
+
+
+@pytest.fixture(autouse=True)
+def clear_dependency_caches() -> None:
+    get_settings.cache_clear()
+    get_embedder.cache_clear()
+    get_indexing_service.cache_clear()
+    get_query_service.cache_clear()
 
 
 @pytest.fixture

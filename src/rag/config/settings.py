@@ -24,6 +24,18 @@ class Settings(BaseSettings):
     chunk_overlap: int = 120
     retrieval_top_k: int = 5
     embedding_dimension: int = 256
+    embedder_provider: str = "hash"
+    embedding_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
+    external_embedding_api_key: str | None = None
+    external_embedding_base_url: str = "https://api.openai.com/v1"
+    external_embedding_timeout_seconds: float = 30.0
+    generator_provider: str = "simple"
+    generator_model_name: str = "google/flan-t5-small"
+    local_generator_max_new_tokens: int = 160
+    external_generator_api_key: str | None = None
+    external_generator_base_url: str = "https://api.openai.com/v1"
+    external_generator_timeout_seconds: float = 30.0
+    external_generator_temperature: float = 0.0
 
     allowed_extensions: tuple[str, ...] = (".md", ".txt")
 
