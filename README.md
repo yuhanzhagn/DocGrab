@@ -10,6 +10,7 @@ The project supports:
 - grounded responses with citations
 - FastAPI endpoints
 - framework-agnostic use-case functions
+- a lightweight Django demo shell
 - Docker and Docker Compose local startup
 
 ## Overview
@@ -105,8 +106,9 @@ Expected result:
 ## Docker Startup
 
 The default Docker stack starts:
-- `app`
-- `chroma`
+- `app` for the FastAPI backend
+- `web` for the lightweight Django demo shell
+- `chroma` for vector storage
 
 Optional profile:
 - `model`
@@ -141,7 +143,7 @@ Check status:
 docker compose ps
 ```
 
-App health:
+FastAPI health:
 
 ```bash
 curl -fsS http://localhost:8000/api/health
@@ -152,6 +154,18 @@ Chroma health:
 ```bash
 curl -fsS http://localhost:8001/api/v1/heartbeat
 ```
+
+Django shell:
+
+```bash
+curl -I http://localhost:8010/
+```
+
+Default local URLs:
+- FastAPI API: `http://localhost:8000`
+- Chroma: `http://localhost:8001`
+- Django shell: `http://localhost:8010`
+- Django admin: `http://localhost:8010/admin/`
 
 Stop the stack:
 
@@ -173,6 +187,8 @@ Common runtime settings:
 | --- | --- | --- |
 | `APP_HOST` | `0.0.0.0` | API bind host |
 | `APP_PORT` | `8000` | API bind port |
+| `FASTAPI_BASE_URL` | `http://app:8000/api` in Compose | Base URL used by the Django shell |
+| `WEB_EXTERNAL_PORT` | `8010` | Host port for the Django shell |
 | `CHROMA_HOST` | unset locally / `chroma` in Compose | Remote Chroma host |
 | `CHROMA_PORT` | `8000` | Remote Chroma port |
 | `CHROMA_SSL` | `false` | Use HTTPS for Chroma HTTP client |
@@ -255,6 +271,20 @@ http://localhost:8000/api
 ```bash
 curl -fsS http://localhost:8000/api/health
 ```
+
+### Django Demo Shell
+
+If you are running the Compose stack, open:
+
+```text
+http://localhost:8010/
+```
+
+Available pages:
+- `/` home page
+- `/ingest/` ingest form
+- `/query/` query form
+- `/admin/` Django admin
 
 ### Ingest Documents
 
