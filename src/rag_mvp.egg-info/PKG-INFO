@@ -4,10 +4,440 @@ Version: 0.1.0
 Summary: A local-first Python RAG MVP with FastAPI and Chroma
 Requires-Python: >=3.11
 Description-Content-Type: text/markdown
+Requires-Dist: django>=5.1.0
 Requires-Dist: fastapi>=0.115.0
 Requires-Dist: uvicorn[standard]>=0.30.0
 Requires-Dist: pydantic>=2.8.0
 Requires-Dist: pydantic-settings>=2.3.0
-Requires-Dist: chromadb>=0.5.5
+Requires-Dist: chromadb==0.5.5
 Requires-Dist: httpx>=0.27.0
+Requires-Dist: pypdf>=5.0.0
 Requires-Dist: pytest>=8.2.0
+Provides-Extra: local-embeddings
+Requires-Dist: sentence-transformers>=3.0.0; extra == "local-embeddings"
+Provides-Extra: local-generation
+Requires-Dist: transformers>=4.44.0; extra == "local-generation"
+
+# RAG MVP
+
+A local-first Retrieval-Augmented Generation MVP built with FastAPI and Chroma.
+
+The project supports:
+- document ingestion for `.md`, `.txt`, and `.pdf`
+- simple chunking with citation metadata
+- provider-based embeddings
+- provider-based answer generation
+- grounded responses with citations
+- FastAPI endpoints
+- framework-agnostic use-case functions
+- a lightweight Django demo shell
+- Docker and Docker Compose local startup
+
+## Overview
+
+This project indexes local documents into Chroma, retrieves the most relevant chunks for a query, and returns a grounded answer with citations.
+
+The default setup is intentionally lightweight:
+- embedder: `hash`
+- generator: `simple`
+
+That means the app can run locally without external API keys and without a heavyweight local model.
+
+## Architecture
+
+High-level flow:
+
+1. Load documents from disk.
+2. Chunk documents while preserving citation metadata.
+3. Embed chunks with the configured embedding provider.
+4. Store vectors and metadata in Chroma.
+5. Retrieve relevant chunks for a query.
+6. Generate a grounded answer from retrieved context.
+7. Return answer text, citations, and retrieved chunk metadata through the API.
+
+Core modules:
+- `src/rag/loaders/`: text and PDF loading
+- `src/rag/chunkers/`: chunking logic
+- `src/rag/embeddings/`: provider-based embedding layer
+- `src/rag/vectorstores/`: Chroma-backed vector storage
+- `src/rag/retrieval/`: retrieval logic
+- `src/rag/generation/`: provider-based grounded answer generation
+- `src/rag/services/`: indexing and query services
+- `src/rag/use_cases.py`: framework-agnostic entrypoints
+- `src/rag/api/`: FastAPI routes and dependency wiring
+
+## Provider Modes
+
+Embedding providers:
+- `hash`: deterministic fallback, no external dependencies
+- `local`: in-process local embedding provider using `sentence-transformers`
+- `external`: external API-backed embedding provider
+
+Generation providers:
+- `simple`: deterministic fallback grounded answer generator
+- `local`: in-process local generator using `transformers`
+- `external`: external API-backed generator
+
+Important note:
+- The optional Compose `model` service is available for local experimentation, but the current application code does not yet route embedder/generator requests through `LOCAL_MODEL_ENDPOINT`.
+- Today, `local` provider mode means in-process Python model execution, not a remote model-serving container.
+
+## Requirements
+
+- Python `3.11+`
+- Docker and Docker Compose for containerized startup
+
+## Local Python Setup
+
+Create a virtual environment and install the project:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -e .
+```
+
+Optional local model dependencies:
+
+```bash
+pip install -e ".[local-embeddings]"
+pip install -e ".[local-generation]"
+```
+
+Start the API locally:
+
+```bash
+uvicorn rag.main:app --host 0.0.0.0 --port 8000
+```
+
+Health check:
+
+```bash
+curl -fsS http://localhost:8000/api/health
+```
+
+Expected result:
+
+```json
+{"status":"ok"}
+```
+
+## Docker Startup
+
+The default Docker stack starts:
+- `app` for the FastAPI backend
+- `web` for the lightweight Django demo shell
+- `chroma` for vector storage
+
+Optional profile:
+- `model`
+
+Copy the example environment file if you want to customize settings:
+
+```bash
+cp .env.example .env
+```
+
+Start the default lightweight stack:
+
+```bash
+docker compose up --build -d
+```
+
+Or with the helper target:
+
+```bash
+make up
+```
+
+Start the optional local model service too:
+
+```bash
+docker compose --profile local-model up --build -d
+```
+
+Check status:
+
+```bash
+docker compose ps
+```
+
+FastAPI health:
+
+```bash
+curl -fsS http://localhost:8000/api/health
+```
+
+Chroma health:
+
+```bash
+curl -fsS http://localhost:8001/api/v1/heartbeat
+```
+
+Django shell:
+
+```bash
+curl -I http://localhost:8010/
+```
+
+Default local URLs:
+- FastAPI API: `http://localhost:8000`
+- Chroma: `http://localhost:8001`
+- Django shell: `http://localhost:8010`
+- Django admin: `http://localhost:8010/admin/`
+
+Stop the stack:
+
+```bash
+docker compose down
+```
+
+Or:
+
+```bash
+make down
+```
+
+## Environment Variables
+
+Common runtime settings:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `APP_HOST` | `0.0.0.0` | API bind host |
+| `APP_PORT` | `8000` | API bind port |
+| `FASTAPI_BASE_URL` | `http://app:8000/api` in Compose | Base URL used by the Django shell |
+| `WEB_EXTERNAL_PORT` | `8010` | Host port for the Django shell |
+| `CHROMA_HOST` | unset locally / `chroma` in Compose | Remote Chroma host |
+| `CHROMA_PORT` | `8000` | Remote Chroma port |
+| `CHROMA_SSL` | `false` | Use HTTPS for Chroma HTTP client |
+| `CHROMA_COLLECTION_NAME` | `documents` | Chroma collection name |
+| `EMBEDDER_PROVIDER` | `hash` | `hash`, `local`, or `external` |
+| `EMBEDDING_MODEL_NAME` | `sentence-transformers/all-MiniLM-L6-v2` | Embedding model identifier |
+| `EMBEDDING_DIMENSION` | `256` | Hash embedder dimension |
+| `GENERATOR_PROVIDER` | `simple` | `simple`, `local`, or `external` |
+| `GENERATOR_MODEL_NAME` | `google/flan-t5-small` | Generator model identifier |
+| `LOCAL_GENERATOR_MAX_NEW_TOKENS` | `160` | Local generator output cap |
+| `EXTERNAL_EMBEDDING_API_KEY` | unset | Required for external embeddings |
+| `EXTERNAL_EMBEDDING_BASE_URL` | `https://api.openai.com/v1` | External embedding API base URL |
+| `EXTERNAL_GENERATOR_API_KEY` | unset | Required for external generation |
+| `EXTERNAL_GENERATOR_BASE_URL` | `https://api.openai.com/v1` | External generator API base URL |
+| `EXTERNAL_GENERATOR_TIMEOUT_SECONDS` | `30.0` | External generator timeout |
+| `EXTERNAL_GENERATOR_TEMPERATURE` | `0.0` | External generator temperature |
+| `LOCAL_MODEL_ENDPOINT` | unset | Reserved for optional model-service integration |
+
+Document ingestion settings:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `CHUNK_SIZE` | `800` | Chunk size |
+| `CHUNK_OVERLAP` | `120` | Chunk overlap |
+
+## Configuration Examples
+
+### Default Lightweight Mode
+
+No external credentials required:
+
+```bash
+export EMBEDDER_PROVIDER=hash
+export GENERATOR_PROVIDER=simple
+```
+
+### External Provider Mode
+
+Example:
+
+```bash
+export EMBEDDER_PROVIDER=external
+export EMBEDDING_MODEL_NAME=text-embedding-3-small
+export EXTERNAL_EMBEDDING_API_KEY=your-embedding-key
+
+export GENERATOR_PROVIDER=external
+export GENERATOR_MODEL_NAME=gpt-4o-mini
+export EXTERNAL_GENERATOR_API_KEY=your-generator-key
+```
+
+### Optional Local Provider Mode
+
+Install optional dependencies first:
+
+```bash
+pip install -e ".[local-embeddings]"
+pip install -e ".[local-generation]"
+```
+
+Then configure:
+
+```bash
+export EMBEDDER_PROVIDER=local
+export EMBEDDING_MODEL_NAME=sentence-transformers/all-MiniLM-L6-v2
+
+export GENERATOR_PROVIDER=local
+export GENERATOR_MODEL_NAME=google/flan-t5-small
+```
+
+## API Usage
+
+Base URL:
+
+```text
+http://localhost:8000/api
+```
+
+### Health
+
+```bash
+curl -fsS http://localhost:8000/api/health
+```
+
+### Django Demo Shell
+
+If you are running the Compose stack, open:
+
+```text
+http://localhost:8010/
+```
+
+Available pages:
+- `/` home page
+- `/ingest/` ingest form
+- `/query/` query form
+- `/admin/` Django admin
+
+### Ingest Documents
+
+Index a directory of local files:
+
+```bash
+curl -X POST http://localhost:8000/api/documents/ingest \
+  -H "Content-Type: application/json" \
+  -d '{
+    "directory": "/absolute/path/to/your/documents"
+  }'
+```
+
+Example response:
+
+```json
+{
+  "indexed_documents": 2,
+  "indexed_chunks": 5,
+  "skipped_files": []
+}
+```
+
+### Query the API
+
+Basic query:
+
+```bash
+curl -X POST http://localhost:8000/api/query/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Which database stores document embeddings?",
+    "top_k": 3
+  }'
+```
+
+Query with source-path filtering:
+
+```bash
+curl -X POST http://localhost:8000/api/query/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Which database stores document embeddings?",
+    "top_k": 3,
+    "source_path": "/absolute/path/to/architecture.md"
+  }'
+```
+
+Response shape:
+
+```json
+{
+  "result": {
+    "answer_text": "Question: Which database stores document embeddings?\n\nGrounded context: ...",
+    "citations": [
+      {
+        "chunk_id": "chunk-id",
+        "document_id": "document-id",
+        "source_path": "/absolute/path/to/file.md",
+        "document_title": "RAG MVP Architecture",
+        "file_name": "file.md",
+        "file_type": "md",
+        "section_header": "Architecture",
+        "page_number": null,
+        "chunk_index": 0,
+        "start_char": 0,
+        "end_char": 120,
+        "snippet": "This sample project stores document embeddings in Chroma."
+      }
+    ],
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk-id",
+        "score": 0.45,
+        "distance": 0.55,
+        "relevance": "high",
+        "source_path": "/absolute/path/to/file.md",
+        "document_title": "RAG MVP Architecture",
+        "file_name": "file.md",
+        "file_type": "md",
+        "section_header": "Architecture",
+        "page_number": null,
+        "chunk_index": 0,
+        "text": "This sample project stores document embeddings in Chroma."
+      }
+    ]
+  }
+}
+```
+
+## Framework-Agnostic Usage
+
+The core pipeline can also be called directly from Python without going through FastAPI routes.
+
+Use cases live in [`src/rag/use_cases.py`](/home/yuhanzhang/ai-assitant/src/rag/use_cases.py).
+
+Example:
+
+```python
+from rag.api.deps import get_indexing_service, get_query_service
+from rag.use_cases import answer_query, ingest_directory
+
+ingest_result = ingest_directory(
+    indexing_service=get_indexing_service(),
+    directory="/absolute/path/to/documents",
+)
+
+answer = answer_query(
+    query_service=get_query_service(),
+    query="Which database stores document embeddings?",
+    top_k=3,
+)
+```
+
+## Running Tests
+
+Run the full test suite:
+
+```bash
+pytest -q
+```
+
+Run a focused subset:
+
+```bash
+pytest tests/unit -q
+pytest tests/integration -q
+```
+
+## Current Limitations
+
+- The default generation path is still intentionally simple and deterministic.
+- External provider support is implemented, but this README does not claim live external API validation in every environment.
+- Local provider mode runs models in-process and may be slow or too heavy for smaller machines.
+- The optional Docker `model` service is not yet wired into the Python provider layer.
+- PDF support depends on text extraction quality; scanned/image-only PDFs are not handled yet.
