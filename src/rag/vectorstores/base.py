@@ -17,3 +17,7 @@ class VectorStore(ABC):
         path_filter: str | None = None,
     ) -> list[RetrievalResult]:
         raise NotImplementedError
+
+    @abstractmethod
+    def check_health(self) -> None:
+        raise NotImplementedError

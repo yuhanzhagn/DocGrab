@@ -54,6 +54,9 @@ class InMemoryVectorStore(VectorStore):
             )
         return results
 
+    def check_health(self) -> None:
+        return None
+
     @staticmethod
     def _cosine_similarity(left: list[float], right: list[float]) -> float:
         if not left or not right or len(left) != len(right):

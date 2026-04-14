@@ -25,6 +25,6 @@ COPY data /app/data
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=5 \
-  CMD /bin/sh -c "python -c \"import os, urllib.request; port=os.getenv('APP_PORT', '8000'); urllib.request.urlopen(f'http://127.0.0.1:{port}/api/health').read()\""
+  CMD /bin/sh -c "python -c \"import os, urllib.request; port=os.getenv('APP_PORT', '8000'); urllib.request.urlopen(f'http://127.0.0.1:{port}/api/ready').read()\""
 
 CMD ["/bin/sh", "-c", "uvicorn rag.main:app --host ${APP_HOST:-0.0.0.0} --port ${APP_PORT:-8000}"]

@@ -91,6 +91,9 @@ class ChromaVectorStore(VectorStore):
             )
         return results
 
+    def check_health(self) -> None:
+        self._collection.count()
+
     @staticmethod
     def _normalize_metadata(metadata: dict) -> dict:
         normalized: dict[str, str | int | float | bool] = {}
