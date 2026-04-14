@@ -40,7 +40,7 @@ services:
       - "${WEB_EXTERNAL_PORT:-8010}:8001"
     depends_on:
       app:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - .:/app
 
