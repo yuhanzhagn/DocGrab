@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     api_prefix: str = "/api"
     app_host: str = "0.0.0.0"
     app_port: int = 8000
+    cors_allowed_origins: str = "http://localhost:5173,http://localhost:8010"
 
     data_dir: Path = Field(default=Path("data"))
     chroma_dir: Path = Field(default=Path("data/chroma"))
@@ -44,6 +45,10 @@ class Settings(BaseSettings):
     local_model_endpoint: str | None = None
 
     allowed_extensions: tuple[str, ...] = (".md", ".txt", ".pdf")
+
+    @property
+    def cors_origins(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
 
 
 @lru_cache

@@ -17,3 +17,6 @@ ps:
 
 health:
 	curl -fsS http://localhost:$${APP_EXTERNAL_PORT:-8000}/api/health
+
+web-health:
+	curl -fsS http://localhost:$${WEB_EXTERNAL_PORT:-8010}/

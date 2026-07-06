@@ -6,6 +6,7 @@ services:
     environment:
       APP_HOST: ${APP_HOST:-0.0.0.0}
       APP_PORT: ${APP_PORT:-8000}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:8010}
       CHROMA_HOST: ${CHROMA_HOST:-chroma}
       CHROMA_PORT: ${CHROMA_PORT:-8000}
       CHROMA_SSL: ${CHROMA_SSL:-false}
@@ -29,20 +30,13 @@ services:
 
   web:
     build:
-      context: .
+      context: ./frontend
       dockerfile: Dockerfile
-    environment:
-      FASTAPI_BASE_URL: ${FASTAPI_BASE_URL:-http://app:8000/api}
-    command: >
-      /bin/sh -c "python manage.py migrate &&
-      python manage.py runserver 0.0.0.0:8001"
     ports:
-      - "${WEB_EXTERNAL_PORT:-8010}:8001"
+      - "${WEB_EXTERNAL_PORT:-8010}:80"
     depends_on:
       app:
         condition: service_healthy
-    volumes:
-      - .:/app
 
   chroma:
     image: chromadb/chroma:0.5.5

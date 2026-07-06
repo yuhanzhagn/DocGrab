@@ -10,7 +10,7 @@ The project supports:
 - grounded responses with citations
 - FastAPI endpoints
 - framework-agnostic use-case functions
-- a lightweight Django demo shell
+- a React TypeScript document workbench
 - Docker and Docker Compose local startup
 
 ## Overview
@@ -65,6 +65,7 @@ Important note:
 ## Requirements
 
 - Python `3.11+`
+- Node.js `20+` for local frontend development
 - Docker and Docker Compose for containerized startup
 
 ## Local Python Setup
@@ -103,11 +104,29 @@ Expected result:
 {"status":"ok"}
 ```
 
+## Local Frontend Setup
+
+Install frontend dependencies and start the Vite dev server:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The local React app runs at:
+
+```text
+http://localhost:5173/
+```
+
+The Vite dev server proxies `/api` requests to `http://127.0.0.1:8000`.
+
 ## Docker Startup
 
 The default Docker stack starts:
 - `app` for the FastAPI backend
-- `web` for the lightweight Django demo shell
+- `web` for the React frontend served by nginx
 - `chroma` for vector storage
 
 Optional profile:
@@ -155,7 +174,7 @@ Chroma health:
 curl -fsS http://localhost:8001/api/v1/heartbeat
 ```
 
-Django shell:
+React frontend:
 
 ```bash
 curl -I http://localhost:8010/
@@ -164,8 +183,7 @@ curl -I http://localhost:8010/
 Default local URLs:
 - FastAPI API: `http://localhost:8000`
 - Chroma: `http://localhost:8001`
-- Django shell: `http://localhost:8010`
-- Django admin: `http://localhost:8010/admin/`
+- React frontend: `http://localhost:8010`
 
 Stop the stack:
 
@@ -187,8 +205,8 @@ Common runtime settings:
 | --- | --- | --- |
 | `APP_HOST` | `0.0.0.0` | API bind host |
 | `APP_PORT` | `8000` | API bind port |
-| `FASTAPI_BASE_URL` | `http://app:8000/api` in Compose | Base URL used by the Django shell |
-| `WEB_EXTERNAL_PORT` | `8010` | Host port for the Django shell |
+| `WEB_EXTERNAL_PORT` | `8010` | Host port for the React frontend |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,http://localhost:8010` | Comma-separated browser origins allowed by FastAPI |
 | `CHROMA_HOST` | unset locally / `chroma` in Compose | Remote Chroma host |
 | `CHROMA_PORT` | `8000` | Remote Chroma port |
 | `CHROMA_SSL` | `false` | Use HTTPS for Chroma HTTP client |
@@ -272,7 +290,7 @@ http://localhost:8000/api
 curl -fsS http://localhost:8000/api/health
 ```
 
-### Django Demo Shell
+### React Workbench
 
 If you are running the Compose stack, open:
 
@@ -280,11 +298,7 @@ If you are running the Compose stack, open:
 http://localhost:8010/
 ```
 
-Available pages:
-- `/` home page
-- `/ingest/` ingest form
-- `/query/` query form
-- `/admin/` Django admin
+The workbench includes document ingestion, query controls, citations, retrieved chunk inspection, and browser-local query history.
 
 ### Ingest Documents
 
