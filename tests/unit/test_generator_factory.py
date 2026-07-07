@@ -5,6 +5,7 @@ from rag.config.settings import Settings
 from rag.generation.external import ExternalAPIAnswerGenerator
 from rag.generation.factory import create_generator
 from rag.generation.local import LocalModelAnswerGenerator
+from rag.generation.ollama import OllamaAnswerGenerator
 from rag.generation.simple import SimpleGroundedAnswerGenerator
 from rag.schemas.retrieval import RetrievalResult
 
@@ -53,6 +54,24 @@ class _FakeClient:
         return self._response
 
 
+class _FakeOllamaClient:
+    def __init__(self, response: _FakeResponse, **_: object) -> None:
+        self._response = response
+
+    def __enter__(self) -> "_FakeOllamaClient":
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        return None
+
+    def post(self, url: str, json: dict) -> _FakeResponse:
+        assert url.endswith("/api/chat")
+        assert json["model"] == "qwen2.5:1.5b"
+        assert json["stream"] is False
+        assert json["messages"][0]["role"] == "system"
+        return self._response
+
+
 def _sample_results() -> list[RetrievalResult]:
     return [
         RetrievalResult(
@@ -94,6 +113,30 @@ def test_generator_factory_returns_local_provider() -> None:
     assert generator.model_name == "google/flan-t5-small"
 
 
+def test_generator_factory_returns_ollama_provider() -> None:
+    generator = create_generator(
+        Settings(
+            generator_provider="ollama",
+            generator_model_name="qwen2.5:1.5b",
+            local_model_endpoint="http://model:11434",
+        )
+    )
+    assert isinstance(generator, OllamaAnswerGenerator)
+    assert generator.model_name == "qwen2.5:1.5b"
+    assert generator.endpoint == "http://model:11434"
+
+
+def test_generator_factory_requires_ollama_endpoint() -> None:
+    with pytest.raises(ValueError, match="LOCAL_MODEL_ENDPOINT"):
+        create_generator(
+            Settings(
+                generator_provider="ollama",
+                generator_model_name="qwen2.5:1.5b",
+                local_model_endpoint=None,
+            )
+        )
+
+
 def test_generator_factory_requires_external_credentials() -> None:
     with pytest.raises(ValueError, match="EXTERNAL_GENERATOR_API_KEY"):
         create_generator(
@@ -132,6 +175,32 @@ def test_external_generator_uses_api_response() -> None:
                     "choices": [
                         {"message": {"content": "Chroma stores document embeddings."}}
                     ]
+                }
+            ),
+            **kwargs,
+        ),
+    )
+
+    answer = generator.generate(
+        query="Which database stores document embeddings?",
+        retrieval_results=_sample_results(),
+    )
+
+    assert answer.answer_text == "Chroma stores document embeddings."
+    assert len(answer.citations) == 2
+
+
+def test_ollama_generator_uses_api_response() -> None:
+    generator = OllamaAnswerGenerator(
+        model_name="qwen2.5:1.5b",
+        endpoint="http://model:11434",
+        client_factory=lambda **kwargs: _FakeOllamaClient(
+            _FakeResponse(
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": "Chroma stores document embeddings.",
+                    }
                 }
             ),
             **kwargs,

@@ -1,4 +1,6 @@
-.PHONY: build up down logs ps health
+.PHONY: build up down logs ps health web-health llm-up llm-logs llm-pull
+
+LLM_MODEL ?= qwen2.5:1.5b
 
 build:
 	docker compose build
@@ -11,6 +13,15 @@ down:
 
 logs:
 	docker compose logs -f app web chroma
+
+llm-up:
+	OLLAMA_MODEL=$(LLM_MODEL) GENERATOR_PROVIDER=ollama GENERATOR_MODEL_NAME=$(LLM_MODEL) LOCAL_MODEL_ENDPOINT=http://model:11434 docker compose --profile local-model up --build -d
+
+llm-logs:
+	docker compose logs -f app web chroma model model-init
+
+llm-pull:
+	OLLAMA_MODEL=$(LLM_MODEL) docker compose --profile local-model up model-init
 
 ps:
 	docker compose ps

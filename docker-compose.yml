@@ -15,10 +15,13 @@ services:
       EMBEDDING_MODEL_NAME: ${EMBEDDING_MODEL_NAME:-sentence-transformers/all-MiniLM-L6-v2}
       GENERATOR_PROVIDER: ${GENERATOR_PROVIDER:-simple}
       GENERATOR_MODEL_NAME: ${GENERATOR_MODEL_NAME:-google/flan-t5-small}
+      LOCAL_GENERATOR_MAX_NEW_TOKENS: ${LOCAL_GENERATOR_MAX_NEW_TOKENS:-160}
       EXTERNAL_EMBEDDING_API_KEY: ${EXTERNAL_EMBEDDING_API_KEY:-}
       EXTERNAL_EMBEDDING_BASE_URL: ${EXTERNAL_EMBEDDING_BASE_URL:-https://api.openai.com/v1}
       EXTERNAL_GENERATOR_API_KEY: ${EXTERNAL_GENERATOR_API_KEY:-}
       EXTERNAL_GENERATOR_BASE_URL: ${EXTERNAL_GENERATOR_BASE_URL:-https://api.openai.com/v1}
+      EXTERNAL_GENERATOR_TIMEOUT_SECONDS: ${EXTERNAL_GENERATOR_TIMEOUT_SECONDS:-120.0}
+      EXTERNAL_GENERATOR_TEMPERATURE: ${EXTERNAL_GENERATOR_TEMPERATURE:-0.0}
       LOCAL_MODEL_ENDPOINT: ${LOCAL_MODEL_ENDPOINT:-}
     ports:
       - "${APP_EXTERNAL_PORT:-8000}:8000"
@@ -57,10 +60,31 @@ services:
   model:
     image: ollama/ollama:latest
     profiles: ["local-model"]
+    environment:
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-24h}
     ports:
       - "${LOCAL_MODEL_EXTERNAL_PORT:-11434}:11434"
     volumes:
       - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  model-init:
+    image: ollama/ollama:latest
+    profiles: ["local-model"]
+    depends_on:
+      model:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://model:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:1.5b}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - ollama pull "${OLLAMA_MODEL:-qwen2.5:1.5b}" && ollama run "${OLLAMA_MODEL:-qwen2.5:1.5b}" "Ready" >/dev/null
 
 volumes:
   chroma_data:

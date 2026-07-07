@@ -56,11 +56,12 @@ Embedding providers:
 Generation providers:
 - `simple`: deterministic fallback grounded answer generator
 - `local`: in-process local generator using `transformers`
+- `ollama`: local model server generator using the Compose `model` service
 - `external`: external API-backed generator
 
 Important note:
-- The optional Compose `model` service is available for local experimentation, but the current application code does not yet route embedder/generator requests through `LOCAL_MODEL_ENDPOINT`.
 - Today, `local` provider mode means in-process Python model execution, not a remote model-serving container.
+- Use `ollama` provider mode when you want the Python app to call the Dockerized Ollama model service through `LOCAL_MODEL_ENDPOINT`.
 
 ## Requirements
 
@@ -156,6 +157,22 @@ Start the optional local model service too:
 docker compose --profile local-model up --build -d
 ```
 
+Start the app with Qwen 2.5 1.5B through Ollama in one command:
+
+```bash
+make llm-up
+```
+
+Before running this on Docker Desktop, set Docker Desktop's global memory allocation to at least 6 GB. Compose can cap a container, but it cannot increase Docker Desktop's overall memory pool.
+
+This starts the normal app stack plus the Ollama `model` service, pulls `qwen2.5:1.5b`, and configures the API with `GENERATOR_PROVIDER=ollama`.
+
+You can override the model:
+
+```bash
+make llm-up LLM_MODEL=qwen2.5:3b
+```
+
 Check status:
 
 ```bash
@@ -214,7 +231,7 @@ Common runtime settings:
 | `EMBEDDER_PROVIDER` | `hash` | `hash`, `local`, or `external` |
 | `EMBEDDING_MODEL_NAME` | `sentence-transformers/all-MiniLM-L6-v2` | Embedding model identifier |
 | `EMBEDDING_DIMENSION` | `256` | Hash embedder dimension |
-| `GENERATOR_PROVIDER` | `simple` | `simple`, `local`, or `external` |
+| `GENERATOR_PROVIDER` | `simple` | `simple`, `local`, `ollama`, or `external` |
 | `GENERATOR_MODEL_NAME` | `google/flan-t5-small` | Generator model identifier |
 | `LOCAL_GENERATOR_MAX_NEW_TOKENS` | `160` | Local generator output cap |
 | `EXTERNAL_EMBEDDING_API_KEY` | unset | Required for external embeddings |
@@ -223,7 +240,9 @@ Common runtime settings:
 | `EXTERNAL_GENERATOR_BASE_URL` | `https://api.openai.com/v1` | External generator API base URL |
 | `EXTERNAL_GENERATOR_TIMEOUT_SECONDS` | `30.0` | External generator timeout |
 | `EXTERNAL_GENERATOR_TEMPERATURE` | `0.0` | External generator temperature |
-| `LOCAL_MODEL_ENDPOINT` | unset | Reserved for optional model-service integration |
+| `LOCAL_MODEL_ENDPOINT` | unset | Ollama endpoint used by `GENERATOR_PROVIDER=ollama` |
+| `OLLAMA_MODEL` | `qwen2.5:1.5b` | Model pulled by the Compose `model-init` service |
+| `OLLAMA_KEEP_ALIVE` | `24h` | How long Ollama keeps the loaded model warm |
 
 Document ingestion settings:
 
@@ -274,6 +293,32 @@ export EMBEDDING_MODEL_NAME=sentence-transformers/all-MiniLM-L6-v2
 
 export GENERATOR_PROVIDER=local
 export GENERATOR_MODEL_NAME=google/flan-t5-small
+```
+
+### Ollama Qwen Provider Mode
+
+The easiest path is:
+
+```bash
+make llm-up
+```
+
+Manual equivalent:
+
+```bash
+export EMBEDDER_PROVIDER=hash
+export GENERATOR_PROVIDER=ollama
+export GENERATOR_MODEL_NAME=qwen2.5:1.5b
+export OLLAMA_MODEL=qwen2.5:1.5b
+export LOCAL_MODEL_ENDPOINT=http://model:11434
+
+docker compose --profile local-model up --build -d
+```
+
+Ollama exposes the model on the host at:
+
+```text
+http://localhost:11434
 ```
 
 ## API Usage
@@ -433,5 +478,5 @@ pytest tests/integration -q
 - The default generation path is still intentionally simple and deterministic.
 - External provider support is implemented, but this README does not claim live external API validation in every environment.
 - Local provider mode runs models in-process and may be slow or too heavy for smaller machines.
-- The optional Docker `model` service is not yet wired into the Python provider layer.
+- Ollama provider mode requires the `model` service to be running and may need Docker Desktop or the host Docker engine to have enough memory available.
 - PDF support depends on text extraction quality; scanned/image-only PDFs are not handled yet.

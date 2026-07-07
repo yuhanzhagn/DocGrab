@@ -2,6 +2,7 @@ from rag.config.settings import Settings
 from rag.generation.base import AnswerGenerator
 from rag.generation.external import ExternalAPIAnswerGenerator
 from rag.generation.local import LocalModelAnswerGenerator
+from rag.generation.ollama import OllamaAnswerGenerator
 from rag.generation.simple import SimpleGroundedAnswerGenerator
 
 
@@ -15,6 +16,14 @@ def create_generator(settings: Settings) -> AnswerGenerator:
             model_name=settings.generator_model_name,
             max_new_tokens=settings.local_generator_max_new_tokens,
         )
+    if provider == "ollama":
+        return OllamaAnswerGenerator(
+            model_name=settings.generator_model_name,
+            endpoint=settings.local_model_endpoint,
+            timeout_seconds=settings.external_generator_timeout_seconds,
+            temperature=settings.external_generator_temperature,
+            max_new_tokens=settings.local_generator_max_new_tokens,
+        )
     if provider == "external":
         return ExternalAPIAnswerGenerator(
             model_name=settings.generator_model_name,
@@ -25,5 +34,5 @@ def create_generator(settings: Settings) -> AnswerGenerator:
         )
 
     raise ValueError(
-        "Unsupported generator provider. Expected one of: simple, local, external."
+        "Unsupported generator provider. Expected one of: simple, local, ollama, external."
     )
