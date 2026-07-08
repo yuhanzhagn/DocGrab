@@ -63,6 +63,7 @@ def indexing_service(
         embedder=embedder,
         vector_store=test_vector_store,
         allowed_extensions=(".md", ".txt"),
+        allowed_root=Path("data").resolve(),
     )
 
 

@@ -9,7 +9,7 @@ up:
 	docker compose up --build -d
 
 down:
-	docker compose down
+	docker compose --profile local-model down --remove-orphans
 
 logs:
 	docker compose logs -f app web chroma

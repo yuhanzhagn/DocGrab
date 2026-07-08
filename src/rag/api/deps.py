@@ -55,6 +55,7 @@ def get_indexing_service() -> IndexingService:
         embedder=get_embedder(),
         vector_store=get_vector_store(),
         allowed_extensions=settings.allowed_extensions,
+        allowed_root=settings.data_dir,
     )
 
 

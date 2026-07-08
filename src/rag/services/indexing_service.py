@@ -16,15 +16,18 @@ class IndexingService:
         embedder: Embedder,
         vector_store: VectorStore,
         allowed_extensions: tuple[str, ...],
+        allowed_root: Path | None = None,
     ) -> None:
         self.loader = loader
         self.chunker = chunker
         self.embedder = embedder
         self.vector_store = vector_store
         self.allowed_extensions = {extension.lower() for extension in allowed_extensions}
+        self.allowed_root = allowed_root.expanduser().resolve() if allowed_root else None
 
     def ingest_directory(self, directory: str) -> IngestResponse:
         root = Path(directory).expanduser().resolve()
+        self._ensure_allowed_root(root)
         if not root.exists() or not root.is_dir():
             raise FileNotFoundError(f"Directory not found: {root}")
 
@@ -69,3 +72,12 @@ class IndexingService:
             indexed_chunks=indexed_chunks,
             skipped_files=skipped_files,
         )
+
+    def _ensure_allowed_root(self, root: Path) -> None:
+        if self.allowed_root is None:
+            return
+        if not root.is_relative_to(self.allowed_root):
+            raise PermissionError(
+                f"Directory is outside allowed data directory: {root}. "
+                f"Allowed root: {self.allowed_root}"
+            )

@@ -1,5 +1,8 @@
 from pathlib import Path
 
+import pytest
+from fastapi import HTTPException
+
 from rag.api.routes.ingest import ingest_documents
 from rag.api.routes.query import query_documents
 from rag.schemas.api import IngestRequest
@@ -66,6 +69,23 @@ def test_query_api_supports_source_path_filter(
 
     assert payload.result.citations
     assert all("architecture.md" in citation.source_path for citation in payload.result.citations)
+
+
+def test_ingest_api_rejects_directory_outside_allowed_root(
+    indexing_service: IndexingService,
+    tmp_path: Path,
+) -> None:
+    outside_root = tmp_path / "outside"
+    outside_root.mkdir()
+
+    with pytest.raises(HTTPException) as exc_info:
+        ingest_documents(
+            IngestRequest(directory=str(outside_root)),
+            indexing_service=indexing_service,
+        )
+
+    assert exc_info.value.status_code == 403
+    assert "outside allowed data directory" in str(exc_info.value.detail)
 
 
 def test_query_api_returns_grounded_fallback_for_weak_retrieval(
