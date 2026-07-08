@@ -119,6 +119,10 @@ h2 {
   align-items: start;
 }
 
+.workspace > * {
+  min-width: 0;
+}
+
 .sidebar {
   position: sticky;
   top: 18px;
@@ -146,8 +150,14 @@ h2 {
 
 .nav-button {
   width: 100%;
+  max-width: 100%;
   padding: 10px 12px;
+  overflow: hidden;
   text-align: left;
+}
+
+.nav-button svg {
+  flex: 0 0 auto;
 }
 
 .nav-button.active,
@@ -251,6 +261,7 @@ h2 {
 label {
   display: grid;
   gap: 7px;
+  min-width: 0;
   margin-bottom: 16px;
   color: #2b393c;
   font-weight: 750;
@@ -259,6 +270,7 @@ label {
 input,
 textarea {
   width: 100%;
+  min-width: 0;
   border: 1px solid #b9c6c2;
   border-radius: 8px;
   background: #ffffff;
@@ -295,8 +307,11 @@ textarea:focus {
   align-items: center;
   justify-content: center;
   gap: 9px;
+  width: fit-content;
+  max-width: 100%;
   min-height: 44px;
   padding: 0 18px;
+  white-space: normal;
   border: 0;
   border-radius: 8px;
   background: var(--teal);
