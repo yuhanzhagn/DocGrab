@@ -7,9 +7,12 @@ The guiding constraint is to keep the working MVP intact while adding production
 ## Implemented Migration Progress
 
 - Step 1 is complete: `src/docgrab_ingest/` now contains versioned ingestion document and chunk models plus deterministic content hashing helpers.
-- Implemented hashing uses normalized text and retrieval-meaningful structural metadata for chunk hashes.
+- Hash payloads use version `v2`: line endings are canonicalized, but all other whitespace is preserved because it can be meaningful Markdown content. The persisted document and chunk schemas are also `v2` and carry `hash_version="v2"`; existing `v1` hashes are incompatible and must be rebuilt before use.
+- Documents and chunks verify their supplied hashes. Chunk occurrence IDs use source identity, content hash, and a duplicate occurrence ordinal, so duplicate text cannot overwrite another occurrence and earlier edits with distinct chunk content do not churn unchanged IDs.
+- Persisted file paths are canonical portable relative paths, and document metadata accepts recursive JSON values only.
+- Step 2 is complete: `src/docgrab_ingest/sources/` now defines source discovery contracts and a local-file adapter with deterministic root-relative paths, extension filtering, and source-root containment checks.
 - The existing `src/rag/` FastAPI RAG path remains unchanged.
-- The next incomplete step is ingestion interfaces and local-source adapters.
+- The next incomplete step is structure-aware Markdown parsing and chunking.
 
 ## Current Repository Audit
 
@@ -259,6 +262,7 @@ src/docgrab_ingest/
   config.py
   hashing.py
   models.py
+  paths.py
   sources/
   parsers/
   chunking/
@@ -378,8 +382,10 @@ Metadata should include:
 - `heading_path`
 - `symbol_name`
 - `chunk_index`
+- `occurrence_ordinal`
 - `content_hash`
 - `document_hash`
+- `hash_version`
 - `embedding_model`
 - `created_at`
 - `parser_version`
@@ -591,8 +597,10 @@ file_path
 heading_path
 symbol_name
 chunk_index
+occurrence_ordinal
 content_hash
 document_hash
+hash_version
 embedding_model
 parser_version
 chunker_version
@@ -606,7 +614,10 @@ Use:
 
 - `document_hash` for entire source content
 - `content_hash` for normalized chunk text plus selected structural metadata
+- `chunk_id` for source-scoped content identity plus `occurrence_ordinal`; it intentionally excludes document-wide hashes and absolute offsets
 - `embedding_cache_key = content_hash + embedding_model`
+
+Exact duplicate chunks are intentionally disambiguated by occurrence ordinal. Inserting another identical chunk before an existing duplicate can therefore change that duplicate's ID; a later parser may adopt a more contextual duplicate policy if this churn becomes material.
 
 Indexing decisions:
 
@@ -806,6 +817,7 @@ Purpose:
 - add stable content hash primitives
 - formalize versioned ingestion document and chunk contracts
 - validate target chunk metadata fields
+- validate document and chunk hash integrity, with a separate deterministic chunk occurrence ID
 - avoid touching existing runtime behavior
 
 Status:
@@ -827,6 +839,10 @@ Purpose:
 - add local file source records without changing FastAPI ingestion
 - keep parsing and chunking out of this step
 
+Status:
+
+- complete
+
 ### Commit 3: Markdown Structure-Aware Chunker
 
 Files:
@@ -841,33 +857,73 @@ Purpose:
 - improve chunk explainability
 - avoid changing existing `SimpleTextChunker` until the new path is proven
 
-### Commit 4: Embedding Cache
+### Commit 4: In-Process Ingestion Orchestration Seam
 
 Files:
 
-- `src/docgrab_ingest/embeddings/cache.py`
-- `tests/unit/test_embedding_cache.py`
+- `src/docgrab_ingest/pipeline/base.py`
+- `tests/unit/test_ingestion_orchestrator.py`
 
 Purpose:
 
-- avoid recomputing embeddings for unchanged content
-- establish the `content_hash + embedding_model` cache key
+- compose source discovery, parsing, and chunking in-process without a CLI or persistence
+- integration-test component contracts before additional ingestion stages accumulate
 
-### Commit 5: Incremental Indexing Manifest
+### Commit 5: Source-Code Parsing And Chunking
+
+Files:
+
+- `src/docgrab_ingest/parsers/source_code.py`
+- `src/docgrab_ingest/chunking/source_code.py`
+- `tests/unit/test_source_code_chunking.py`
+
+Purpose:
+
+- preserve source-code symbol boundaries and paths
+- keep code-specific parsing separate from Markdown parsing
+
+### Commit 6: SQLite Metadata Manifest And Change Planning
 
 Files:
 
 - `src/docgrab_ingest/metadata/store.py`
-- `src/docgrab_ingest/pipeline/checkpoint.py`
+- `src/docgrab_ingest/metadata/change_planner.py`
 - `tests/unit/test_incremental_indexing.py`
 
 Purpose:
 
 - track source and chunk state
-- skip unchanged work
-- support resumable ingestion
+- decide add, change, and delete work explicitly
 
-### Commit 6: BM25 Index Builder
+### Commit 7: Embedding Cache And Resilient Batch Embedding
+
+Files:
+
+- `src/docgrab_ingest/embeddings/cache.py`
+- `src/docgrab_ingest/embeddings/retrying.py`
+- `tests/unit/test_embedding_cache.py`
+- `tests/unit/test_embedding_retrying.py`
+
+Purpose:
+
+- cache embeddings by `content_hash + embedding_model`
+- define retry classification and retry exhaustion behavior
+
+### Commit 8: Checkpointing And Ingestion Reports
+
+Files:
+
+- `src/docgrab_ingest/pipeline/checkpoint.py`
+- `src/docgrab_ingest/pipeline/report.py`
+- `tests/unit/test_checkpoint.py`
+- `tests/unit/test_ingestion_report.py`
+
+Purpose:
+
+- resume interrupted ingestion work
+- report ingestion totals and deferred failures
+
+### Commit 9: BM25 Artifact Generation And Lexical Search
 
 Files:
 
@@ -876,10 +932,10 @@ Files:
 
 Purpose:
 
-- add lexical retrieval
+- add lexical retrieval artifacts
 - enable comparison against vector-only retrieval
 
-### Commit 7: RRF And Evaluation
+### Commit 10: RRF Fusion And Retrieval Evaluation
 
 Files:
 
@@ -894,41 +950,72 @@ Purpose:
 - evaluate Recall@K and MRR
 - compare vector, BM25, and hybrid retrieval
 
-### Commit 8: CLI Pipeline
+### Commit 11: Stable Persisted Retrieval Artifact Contracts
 
 Files:
 
-- `src/docgrab_ingest/pipeline/ingest.py`
-- `configs/sample_ingest.yaml`
-- `tests/unit/test_ingest_config.py`
+- `docs/retrieval-artifact-contract.md`
+- `tests/unit/test_retrieval_artifact_contract.py`
 
 Purpose:
 
-- make ingestion runnable outside FastAPI
-- support the target command shape
+- version portable persisted retrieval records and index metadata
+- establish a compatibility boundary before Go work
 
-```bash
-python -m docgrab_ingest.pipeline.ingest --config configs/sample_ingest.yaml
-```
+### Commit 12: Runnable Offline Ingestion Pipeline And Configuration
+
+Files:
+
+- `src/docgrab_ingest/config.py`
+- `src/docgrab_ingest/pipeline/ingest.py`
+- `configs/sample_ingest.yaml`
+- `tests/unit/test_ingest_config.py`
+- `tests/integration/test_ingest_pipeline.py`
+
+Purpose:
+
+- connect the implemented ingestion components into an end-to-end offline workflow
+- validate configuration and expose the documented `python -m docgrab_ingest.pipeline.ingest` command
+- write artifacts that conform to the stable persisted retrieval contracts
+
+### Commit 13: Go Query-Service Skeleton
+
+Files:
+
+- `services/query-api/go.mod`
+- `services/query-api/cmd/server/main.go`
+- `services/query-api/internal/config/config.go`
+
+Purpose:
+
+- establish the Go service layout after artifact contracts stabilize
+
+### Commit 14: Go Request Handling, Cancellation, Observability, SSE, And Sessions
+
+Files:
+
+- `services/query-api/internal/http/`
+- `services/query-api/internal/retrieval/`
+- `services/query-api/internal/session/`
+
+Purpose:
+
+- implement online request behavior against stable retrieval artifacts
 
 ## Next File Changes Before Coding
 
-The next implementation step should change only source discovery interfaces and local file adapters.
+The next implementation step should change only Markdown parsing and structure-aware chunking.
 
 Proposed changes:
 
-1. Add `src/docgrab_ingest/sources/__init__.py`
-   - exports source discovery primitives
+1. Add `src/docgrab_ingest/parsers/markdown.py`
+   - parses Markdown into normalized sections with heading paths
 
-2. Add `src/docgrab_ingest/sources/base.py`
-   - defines source item and loader contracts
+2. Add `src/docgrab_ingest/chunking/markdown.py`
+   - splits parsed Markdown sections into stable chunk boundaries
 
-3. Add `src/docgrab_ingest/sources/local_files.py`
-   - discovers local files under an allowed root
-   - emits typed source records without parsing or chunking
-
-4. Add `tests/unit/test_docgrab_ingest_local_files.py`
-   - covers extension filtering, stable relative paths, and root safety
+3. Add `tests/unit/test_markdown_chunking.py`
+   - covers heading paths, character offsets, and deterministic chunk hashes
 
 ## Quality Gates
 
@@ -981,10 +1068,10 @@ Avoid early complexity from:
 
 ## Next Step
 
-Implement Commit 2 only:
+Implement Commit 3 only:
 
-- ingestion source interfaces
-- local-source adapters
-- focused tests for local discovery behavior
+- Markdown parsing
+- structure-aware Markdown chunking
+- focused tests for heading paths and stable chunk boundaries
 
-Do not begin Markdown parsing, chunking, metadata persistence, or embedding cache work in the same commit.
+Do not begin source-code parsing, metadata persistence, or embedding cache work in the same commit.

@@ -1,23 +1,33 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
 
-DOCUMENT_SCHEMA_VERSION = "docgrab.ingest.document.v1"
-CHUNK_SCHEMA_VERSION = "docgrab.ingest.chunk.v1"
+from docgrab_ingest.hash_primitives import HASH_VERSION
+from docgrab_ingest.hashing import (
+    compute_chunk_hash_from_metadata,
+    compute_chunk_id,
+    compute_document_hash,
+)
+from docgrab_ingest.paths import normalize_relative_file_path
+
+DOCUMENT_SCHEMA_VERSION = "docgrab.ingest.document.v2"
+CHUNK_SCHEMA_VERSION = "docgrab.ingest.chunk.v2"
 HASH_PATTERN = r"^sha256:[0-9a-f]{64}$"
 
 
 class ChunkMetadata(BaseModel):
     model_config = ConfigDict(frozen=True)
 
+    hash_version: Literal["v2"] = HASH_VERSION
     source_type: str = Field(min_length=1)
     repo: str | None = None
     file_path: str = Field(min_length=1)
     heading_path: tuple[str, ...] = Field(default_factory=tuple)
     symbol_name: str | None = None
     chunk_index: int = Field(ge=0)
+    occurrence_ordinal: int = Field(ge=0)
     content_hash: str = Field(pattern=HASH_PATTERN)
     document_hash: str = Field(pattern=HASH_PATTERN)
     embedding_model: str | None = None
@@ -29,7 +39,6 @@ class ChunkMetadata(BaseModel):
     @field_validator(
         "source_type",
         "repo",
-        "file_path",
         "symbol_name",
         "embedding_model",
         "parser_version",
@@ -43,6 +52,11 @@ class ChunkMetadata(BaseModel):
         if not stripped:
             raise ValueError("value must not be blank")
         return stripped
+
+    @field_validator("file_path")
+    @classmethod
+    def validate_file_path(cls, value: str) -> str:
+        return normalize_relative_file_path(value)
 
     @field_validator("heading_path")
     @classmethod
@@ -60,18 +74,19 @@ class ChunkMetadata(BaseModel):
 
 
 class IngestDocument(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False)
 
-    schema_version: Literal["docgrab.ingest.document.v1"] = DOCUMENT_SCHEMA_VERSION
+    schema_version: Literal["docgrab.ingest.document.v2"] = DOCUMENT_SCHEMA_VERSION
+    hash_version: Literal["v2"] = HASH_VERSION
     source_type: str = Field(min_length=1)
     repo: str | None = None
     file_path: str = Field(min_length=1)
     content: str
     document_hash: str = Field(pattern=HASH_PATTERN)
     parser_version: str = Field(min_length=1)
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, JsonValue] = Field(default_factory=dict)
 
-    @field_validator("source_type", "repo", "file_path", "parser_version")
+    @field_validator("source_type", "repo", "parser_version")
     @classmethod
     def strip_optional_text(cls, value: str | None) -> str | None:
         if value is None:
@@ -81,12 +96,24 @@ class IngestDocument(BaseModel):
             raise ValueError("value must not be blank")
         return stripped
 
+    @field_validator("file_path")
+    @classmethod
+    def validate_file_path(cls, value: str) -> str:
+        return normalize_relative_file_path(value)
+
+    @model_validator(mode="after")
+    def validate_document_hash(self) -> "IngestDocument":
+        if self.document_hash != compute_document_hash(self.content):
+            raise ValueError("document_hash must match content")
+        return self
+
 
 class IngestChunk(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    schema_version: Literal["docgrab.ingest.chunk.v1"] = CHUNK_SCHEMA_VERSION
-    chunk_id: str = Field(min_length=1)
+    schema_version: Literal["docgrab.ingest.chunk.v2"] = CHUNK_SCHEMA_VERSION
+    hash_version: Literal["v2"] = HASH_VERSION
+    chunk_id: str = Field(min_length=1, pattern=HASH_PATTERN)
     document_hash: str = Field(pattern=HASH_PATTERN)
     text: str = Field(min_length=1)
     metadata: ChunkMetadata
@@ -100,8 +127,13 @@ class IngestChunk(BaseModel):
         return stripped
 
     @model_validator(mode="after")
-    def validate_document_hash(self) -> "IngestChunk":
+    def validate_hashes_and_chunk_id(self) -> "IngestChunk":
         if self.document_hash != self.metadata.document_hash:
             raise ValueError("document_hash must match metadata.document_hash")
+        if self.hash_version != self.metadata.hash_version:
+            raise ValueError("hash_version must match metadata.hash_version")
+        if self.metadata.content_hash != compute_chunk_hash_from_metadata(self.text, self.metadata):
+            raise ValueError("metadata.content_hash must match text and metadata")
+        if self.chunk_id != compute_chunk_id(self.metadata):
+            raise ValueError("chunk_id must match metadata occurrence identity")
         return self
-

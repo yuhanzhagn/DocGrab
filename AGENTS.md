@@ -45,22 +45,25 @@ Do not begin the next migration stage automatically unless requested.
 Implement capabilities in this order unless the task explicitly requires otherwise:
 
 1. [x] Typed ingestion models and stable content hashing.
-2. [ ] Ingestion interfaces and local-source adapters.
+2. [x] Ingestion interfaces and local-source adapters.
 3. [ ] Structure-aware Markdown parsing and chunking.
-4. [ ] Source-code parsing and chunking.
-5. [ ] SQLite metadata manifest and change planning.
-6. [ ] Embedding cache and resilient batch embedding.
-7. [ ] Checkpointing and ingestion reports.
-8. [ ] BM25 artifact generation and lexical search.
-9. [ ] RRF fusion and retrieval evaluation.
-10. [ ] Stable persisted retrieval artifact contracts.
-11. [ ] Go query-service skeleton.
-12. [ ] Go request handling, cancellation, observability, SSE, and sessions.
+4. [ ] In-process ingestion orchestration seam.
+5. [ ] Source-code parsing and chunking.
+6. [ ] SQLite metadata manifest and change planning.
+7. [ ] Embedding cache and resilient batch embedding.
+8. [ ] Checkpointing and ingestion reports.
+9. [ ] BM25 artifact generation and lexical search.
+10. [ ] RRF fusion and retrieval evaluation.
+11. [ ] Stable persisted retrieval artifact contracts.
+12. [ ] Runnable offline ingestion pipeline and configuration.
+13. [ ] Go query-service skeleton.
+14. [ ] Go request handling, cancellation, observability, SSE, and sessions.
 
 Current migration progress:
 
 - Step 1 is implemented under `src/docgrab_ingest/` with versioned ingestion document/chunk models and deterministic `sha256:<hex>` content hashing.
-- Step 2 is the next incomplete migration step. Do not begin it unless requested.
+- Step 2 is implemented under `src/docgrab_ingest/sources/` with a source-discovery contract and a local-file adapter that emits deterministic root-relative paths for supported files.
+- Step 3 is the next incomplete migration step. Do not begin it unless requested.
 
 A later stage may not silently invent or duplicate contracts owned by an earlier stage.
 
@@ -76,8 +79,10 @@ Target chunk metadata includes:
 - `heading_path`
 - `symbol_name`
 - `chunk_index`
+- `occurrence_ordinal`
 - `content_hash`
 - `document_hash`
+- `hash_version`
 - `embedding_model`
 - `parser_version`
 - `chunker_version`
@@ -109,7 +114,7 @@ pytest -q
 Current audited baseline:
 
 ```text
-50 passed
+84 passed
 ```
 
 Add focused tests for each introduced behavior, especially:

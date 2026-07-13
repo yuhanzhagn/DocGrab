@@ -322,6 +322,10 @@ answer = answer_query(
 
 ## Environment Variables
 
+Copy `.env.example` to the ignored `.env` file when local overrides or provider
+credentials are needed. Docker Compose defaults remain usable without an `.env`
+file.
+
 Common runtime settings:
 
 | Variable | Default | Purpose |
