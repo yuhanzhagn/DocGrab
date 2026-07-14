@@ -10,7 +10,7 @@ The guiding constraint is to keep the working MVP intact while adding production
 - Hash payloads use version `v2`: line endings are canonicalized, but all other whitespace is preserved because it can be meaningful Markdown content. The persisted document and chunk schemas are also `v2` and carry `hash_version="v2"`; existing `v1` hashes are incompatible and must be rebuilt before use.
 - Documents and chunks verify their supplied hashes. Chunk occurrence IDs use source identity, content hash, and a duplicate occurrence ordinal, so duplicate text cannot overwrite another occurrence and earlier edits with distinct chunk content do not churn unchanged IDs.
 - Persisted file paths are canonical portable relative paths, and document metadata accepts recursive JSON values only.
-- Step 2 is complete: `src/docgrab_ingest/sources/` now defines source discovery contracts and a local-file adapter with deterministic root-relative paths, extension filtering, and source-root containment checks.
+- Step 2 is complete: `src/docgrab_ingest/sources/` now defines source discovery contracts and a local-file adapter with deterministic root-relative paths, extension filtering, source-root containment checks, and raw-byte materialization.
 - The existing `src/rag/` FastAPI RAG path remains unchanged.
 - The next incomplete step is structure-aware Markdown parsing and chunking.
 
@@ -530,6 +530,7 @@ src/docgrab_ingest/
 
 - discovers source items
 - returns source records with stable source metadata
+- materializes raw bytes; parsers own decoding and binary-format handling
 - examples: local files, GitHub repo checkout, GitHub issues later
 
 `Parser`:

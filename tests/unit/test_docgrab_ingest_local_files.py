@@ -54,14 +54,14 @@ def test_local_file_source_excludes_files_resolving_outside_its_root(tmp_path: P
     assert [item.file_path for item in source.discover()] == ["inside.md"]
 
 
-def test_local_file_source_reads_discovered_text(tmp_path: Path) -> None:
+def test_local_file_source_reads_discovered_bytes(tmp_path: Path) -> None:
     root = tmp_path / "documents"
     root.mkdir()
-    path = root / "notes.txt"
-    path.write_text("local source text", encoding="utf-8")
-    source = LocalFileSource(root, allowed_extensions=(".txt",))
+    path = root / "manual.pdf"
+    path.write_bytes(b"%PDF-1.4\x00binary")
+    source = LocalFileSource(root, allowed_extensions=(".pdf",))
 
-    assert source.read_text(source.discover()[0]) == "local source text"
+    assert source.read_bytes(source.discover()[0]) == b"%PDF-1.4\x00binary"
 
 
 def test_source_item_supports_remote_identity_without_a_local_path() -> None:

@@ -46,5 +46,5 @@ class SourceLoader(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def read_text(self, item: SourceItem) -> str:
+    def read_bytes(self, item: SourceItem) -> bytes:
         raise NotImplementedError

@@ -70,6 +70,13 @@ def test_hashing_accepts_metadata_without_a_pydantic_dependency() -> None:
     assert compute_chunk_id(metadata).startswith("sha256:")
 
 
+def test_chunk_id_canonicalizes_protocol_metadata_file_paths() -> None:
+    canonical = _AlternateChunkMetadata(file_path="docs/guide.md")
+    equivalent = _AlternateChunkMetadata(file_path="docs/./guide.md")
+
+    assert compute_chunk_id(canonical) == compute_chunk_id(equivalent)
+
+
 def test_chunk_hash_canonicalizes_equivalent_file_paths() -> None:
     hashes = {
         compute_chunk_hash(

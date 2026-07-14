@@ -88,7 +88,7 @@ def compute_chunk_id(metadata: ChunkHashMetadata) -> str:
             "source": {
                 "source_type": metadata.source_type,
                 "repo": metadata.repo,
-                "file_path": metadata.file_path,
+                "file_path": normalize_relative_file_path(metadata.file_path),
             },
             "content_hash": metadata.content_hash,
             "occurrence_ordinal": metadata.occurrence_ordinal,

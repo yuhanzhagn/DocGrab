@@ -62,7 +62,7 @@ Implement capabilities in this order unless the task explicitly requires otherwi
 Current migration progress:
 
 - Step 1 is implemented under `src/docgrab_ingest/` with versioned ingestion document/chunk models and deterministic `sha256:<hex>` content hashing.
-- Step 2 is implemented under `src/docgrab_ingest/sources/` with a source-discovery contract and a local-file adapter that emits deterministic root-relative paths for supported files.
+- Step 2 is implemented under `src/docgrab_ingest/sources/` with a source-discovery contract and a local-file adapter that emits deterministic root-relative paths and raw source bytes for supported files.
 - Step 3 is the next incomplete migration step. Do not begin it unless requested.
 
 A later stage may not silently invent or duplicate contracts owned by an earlier stage.
@@ -114,7 +114,7 @@ pytest -q
 Current audited baseline:
 
 ```text
-84 passed
+85 passed
 ```
 
 Add focused tests for each introduced behavior, especially:

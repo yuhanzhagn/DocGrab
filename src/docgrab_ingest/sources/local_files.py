@@ -34,7 +34,7 @@ class LocalFileSource(SourceLoader):
             )
         return tuple(items)
 
-    def read_text(self, item: SourceItem) -> str:
+    def read_bytes(self, item: SourceItem) -> bytes:
         root = self._resolve_root()
         if item.source_type != self.SOURCE_TYPE:
             raise ValueError("source item is not a local file")
@@ -42,7 +42,7 @@ class LocalFileSource(SourceLoader):
         path = (root / item.file_path).resolve()
         if not path.is_relative_to(root) or not path.is_file() or path.as_uri() != item.source_uri:
             raise ValueError("source item is outside the configured local root")
-        return path.read_text(encoding="utf-8")
+        return path.read_bytes()
 
     def _is_supported_file(self, path: Path, *, root: Path) -> bool:
         if not path.is_file() or path.suffix.lower() not in self.allowed_extensions:
