@@ -46,7 +46,7 @@ Implement capabilities in this order unless the task explicitly requires otherwi
 
 1. [x] Typed ingestion models and stable content hashing.
 2. [x] Ingestion interfaces and local-source adapters.
-3. [ ] Structure-aware Markdown parsing and chunking.
+3. [x] Structure-aware Markdown parsing and chunking.
 4. [ ] In-process ingestion orchestration seam.
 5. [ ] Source-code parsing and chunking.
 6. [ ] SQLite metadata manifest and change planning.
@@ -63,7 +63,8 @@ Current migration progress:
 
 - Step 1 is implemented under `src/docgrab_ingest/` with versioned ingestion document/chunk models and deterministic `sha256:<hex>` content hashing.
 - Step 2 is implemented under `src/docgrab_ingest/sources/` with a source-discovery contract and a local-file adapter that emits deterministic root-relative paths and raw source bytes for supported files.
-- Step 3 is the next incomplete migration step. Do not begin it unless requested.
+- Step 3 is implemented under `src/docgrab_ingest/parsers/` and `src/docgrab_ingest/chunking/` with BOM-aware UTF-8 source decoding, source-identity-bound Markdown sections, indentation-aware heading paths, validated fence handling, normalized logical chunk boundaries, and source character offsets.
+- Step 4 is the next incomplete migration step. Do not begin it unless requested.
 
 A later stage may not silently invent or duplicate contracts owned by an earlier stage.
 
@@ -114,7 +115,7 @@ pytest -q
 Current audited baseline:
 
 ```text
-85 passed
+100 passed
 ```
 
 Add focused tests for each introduced behavior, especially:

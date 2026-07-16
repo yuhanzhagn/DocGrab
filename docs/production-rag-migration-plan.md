@@ -11,8 +11,9 @@ The guiding constraint is to keep the working MVP intact while adding production
 - Documents and chunks verify their supplied hashes. Chunk occurrence IDs use source identity, content hash, and a duplicate occurrence ordinal, so duplicate text cannot overwrite another occurrence and earlier edits with distinct chunk content do not churn unchanged IDs.
 - Persisted file paths are canonical portable relative paths, and document metadata accepts recursive JSON values only.
 - Step 2 is complete: `src/docgrab_ingest/sources/` now defines source discovery contracts and a local-file adapter with deterministic root-relative paths, extension filtering, source-root containment checks, and raw-byte materialization.
+- Step 3 is complete: `src/docgrab_ingest/parsers/markdown.py` decodes BOM-aware UTF-8 source bytes into source-identity-bound, indentation-aware ATX heading-scoped body sections with validated fenced-code handling, and `src/docgrab_ingest/chunking/markdown.py` produces bounded, validated chunks from an LF-normalized logical view while retaining source character offsets.
 - The existing `src/rag/` FastAPI RAG path remains unchanged.
-- The next incomplete step is structure-aware Markdown parsing and chunking.
+- The next incomplete step is an in-process ingestion orchestration seam.
 
 ## Current Repository Audit
 
@@ -858,6 +859,10 @@ Purpose:
 - improve chunk explainability
 - avoid changing existing `SimpleTextChunker` until the new path is proven
 
+Status:
+
+- complete
+
 ### Commit 4: In-Process Ingestion Orchestration Seam
 
 Files:
@@ -1005,18 +1010,15 @@ Purpose:
 
 ## Next File Changes Before Coding
 
-The next implementation step should change only Markdown parsing and structure-aware chunking.
+The next implementation step should add only an in-process ingestion orchestration seam.
 
 Proposed changes:
 
-1. Add `src/docgrab_ingest/parsers/markdown.py`
-   - parses Markdown into normalized sections with heading paths
+1. Add `src/docgrab_ingest/pipeline/base.py`
+   - composes source discovery, parsing, and chunking without adding a CLI or persistence
 
-2. Add `src/docgrab_ingest/chunking/markdown.py`
-   - splits parsed Markdown sections into stable chunk boundaries
-
-3. Add `tests/unit/test_markdown_chunking.py`
-   - covers heading paths, character offsets, and deterministic chunk hashes
+2. Add `tests/unit/test_ingestion_orchestrator.py`
+   - integration-tests the in-process component contracts with test doubles
 
 ## Quality Gates
 
@@ -1069,10 +1071,9 @@ Avoid early complexity from:
 
 ## Next Step
 
-Implement Commit 3 only:
+Implement Commit 4 only:
 
-- Markdown parsing
-- structure-aware Markdown chunking
-- focused tests for heading paths and stable chunk boundaries
+- an in-process ingestion orchestration seam
+- focused integration tests for source, parser, and chunker composition
 
 Do not begin source-code parsing, metadata persistence, or embedding cache work in the same commit.
